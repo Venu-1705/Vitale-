@@ -1,0 +1,76 @@
+-- =============================================================================
+-- Vitalé — Post-companion 0100: audit-enum hardening correction
+-- Ground truth: VITALE_DB_ARCHITECTURE §2 (audit enums, lines 99-102) +
+-- VITALE_IMPLEMENTATION_SPEC §4.2 (tg_audit_permission_change, line 859-862) +
+-- §4.5 (tg_audit_grant_change, line 864-867).
+--
+-- ARCHITECTURE HARDENING CORRECTION (authorized frozen-spec exception) — NOT a
+-- business-model change:
+--   The frozen audit enums describe data-READ access (resource_type =
+--   lab_report…community; action = view/export/update/download). But the spec's
+--   own audit triggers (§4.2 tg_audit_permission_change, §4.5 tg_audit_grant_change)
+--   must record access-CONTROL change events (a grant created/revoked, a member
+--   capability granted/revoked). Those events cannot be expressed by the frozen
+--   enum value set, so the triggers as originally drafted cast string literals
+--   ('access_grant','grant','revoke') that do not exist in the enum — failing at
+--   runtime (silently, behind an EXCEPTION handler in 0126).
+--
+--   This migration adds the MINIMUM values required to represent grant/permission
+--   change events faithfully:
+--     • audit_resource_type += 'access_grant', 'member_permission'
+--     • audit_action        += 'grant', 'revoke'
+--   audit_acting_as is intentionally LEFT UNCHANGED: the actor's capacity is
+--   derived from their organization_members.member_role (owner_coach |
+--   nutritionist | community_manager), all of which are already valid
+--   audit_acting_as values (admin via admin_has_support_access).
+--
+-- Source-of-truth parity: the same four values are reflected in
+--   lib/db/src/schema/enums.ts (auditResourceType, auditAction) and the raw
+--   0002_enums.sql CREATE TYPE statements, and documented in
+--   VITALE_DB_ARCHITECTURE.md §2 as a hardening correction. This file is the
+--   AUTHORITATIVE applier for the migrate-first pipeline (where the enums are
+--   created by the generated Drizzle migration, then extended here).
+--
+-- Apply order: FIRST in the post series (sorts before 0101) so every downstream
+-- audit-writer (0120 RPCs, 0126 grant trigger, 0127 permission trigger) can rely
+-- on the values existing. Idempotent: ADD VALUE IF NOT EXISTS is a no-op if the
+-- value already exists (e.g. after a future Drizzle regenerate bakes them in).
+--
+-- SUBSTRATE NOTE (vanilla PG18): ALTER TYPE ... ADD VALUE may run inside a
+-- transaction block (PG12+); the only restriction is that the new value cannot be
+-- USED in the same transaction that added it. No statement in the migration
+-- pipeline uses these values (trigger/RPC bodies only reference them at runtime,
+-- never during migration), so any runner batching is safe.
+-- =============================================================================
+
+-- audit_resource_type: name WHAT access-control object the audit row concerns.
+--   'access_grant'      — a row in access_grants (customer data-sharing grant)
+--   'member_permission' — a row in organization_member_permissions (staff capability)
+ALTER TYPE public.audit_resource_type ADD VALUE IF NOT EXISTS 'access_grant';
+ALTER TYPE public.audit_resource_type ADD VALUE IF NOT EXISTS 'member_permission';
+
+-- audit_action: name the access-control state transition.
+--   'grant'  — grant created / capability added
+--   'revoke' — grant revoked or expired / capability removed
+--             (grant EXPIRY is recorded as 'revoke'; the precise cause —
+--              revoked vs expired — is preserved on the linked access_grants row
+--              via resource_id, so no separate 'expire' action value is needed.)
+ALTER TYPE public.audit_action ADD VALUE IF NOT EXISTS 'grant';
+ALTER TYPE public.audit_action ADD VALUE IF NOT EXISTS 'revoke';
+
+-- ============================================================================
+-- NOTES
+-- • This is additive only — no existing enum value is renamed or dropped, so no
+--   stored data is invalidated and no D0–D15 table structure changes.
+-- • audit_acting_as is NOT extended — not here and not by the later Finding-C
+--   correction. The originally-drafted data-READ writers used 'self' and 'coach'
+--   (both absent from the frozen enum): 0120's rpc_read_health_observations /
+--   rpc_read_lab_report and the API layer (artifacts/api-server/src/routes/labs.ts).
+--   RESOLVED without any enum change: self-reads are no longer audited (a subject
+--   reading their own data is not coach/admin data access — D1), and coach capacity
+--   is recorded as the actor's real org role (owner_coach|nutritionist|
+--   community_manager, all valid audit_acting_as values — same pattern as 0126/0127).
+--   Admin break-glass records the subject's org context (D2). The stray 'share'
+--   action in labs.ts (not an audit_action value) was removed as redundant with the
+--   'grant' row that tg_audit_grant_change already writes.
+-- =============================================================================

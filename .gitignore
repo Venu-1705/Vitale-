@@ -1,0 +1,120 @@
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# compiled output
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.expo
+.expo-shared
+
+# dependencies
+node_modules
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
+.DS_Store
+Thumbs.db
+
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+
+# Replit
+.cache/
+.local/
+
+# Environment / secrets — never commit. Example files are tracked.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+.env.prod
+.env.prod.*
+!.env.prod.example
+
+# Terraform — state files contain secrets, never commit.
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.*
+infra/terraform/*.tfplan
+
+# ============================================================================
+# Production repo hygiene — internal/local-only material that must NOT ship.
+# These files remain on disk locally; they are simply never committed.
+# ============================================================================
+
+# Local agent / tooling state
+.claude/
+.agents/
+.remember/
+.config/
+.cache/
+
+# Old embedded duplicate of the entire project (has its own .git, ~856MB)
+/Health-Platform-V/
+
+# Backup of the previous git history (kept locally after fresh init; recoverable)
+/.git-old-backup/
+
+# Replit platform files (project now deploys to AWS)
+.replit
+.replitignore
+replit.nix
+replit.md
+
+# Replit "attached assets" — pasted prompt dumps, not used by any source
+/attached_assets/
+
+# Design source PDFs (large binaries, not developer docs)
+/*.pdf
+
+# Internal planning / strategy notes (kept locally, not shipped).
+# Canonical docs that SHOULD ship live in /docs and VITALE_DB_ARCHITECTURE.md.
+/API_BUILD_PLAN.md
+/ARCHITECTURE_FIRST_ROADMAP.md
+/AUTH_DEFERRED_STRATEGY.md
+/BACKEND_DOMAIN_STATUS.md
+/BACKEND_PRIORITY_MATRIX.md
+/BUILD_NOW_RECOMMENDATIONS.md
+/CRITICAL_PATH_DESIGN.md
+/D12_FINDING1_PAYMENT_WEBHOOK_DESIGN.md
+/D1_API_PLAN.md
+/DEPENDENCY_GRAPH.md
+/FOUNDER_BACKEND_STRATEGY.md
+/IMPLEMENTATION_LOG.md
+/NEXT_90_DAYS_BACKEND_ROADMAP.md
+/PLATFORM_BUILD_MASTER_PLAN.md
+/PROJECT_STATUS.md
+/VITALE_CONTEXT.md
+/VITALE_COWORK_PROMPTS.md
+/VITALE_GAP_ANALYSIS.md
+/VITALE_IMPLEMENTATION_SPEC.md

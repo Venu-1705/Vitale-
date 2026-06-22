@@ -1,0 +1,22 @@
+version: 1
+applications:
+  - appRoot: .
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - corepack enable
+            - pnpm install --frozen-lockfile
+        build:
+          commands:
+            # PORT defaults to 5173 if unset; BASE_PATH defaults to /
+            - pnpm --filter ./artifacts/coach-platform build
+      artifacts:
+        baseDirectory: artifacts/coach-platform/dist/public
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - artifacts/coach-platform/node_modules/**/*
+          - lib/*/node_modules/**/*

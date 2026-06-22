@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Core ───────────────────────────────────────────────────────────────────
+aws_region   = "ap-south-1"
+environment  = "prod"
+app_name     = "vitale"
+
+# Your public IP so migrate-prod.sh can reach RDS directly.
+# Find it at: curl -s https://checkip.amazonaws.com
+your_ip_cidr = "CHANGE_ME/32"  # e.g. 203.0.113.42/32
+
+# ─── GitHub ──────────────────────────────────────────────────────────────────
+github_repo_owner   = "Venu-1705"
+github_repo_name    = "CHANGE_ME"  # The repo name on GitHub
+github_access_token = "CHANGE_ME"  # GitHub PAT with repo scope
+
+# ─── Database ────────────────────────────────────────────────────────────────
+db_username = "vitale"
+db_password = "CHANGE_ME"  # Min 16 characters, no / @ " space
+db_name     = "vitale"
+
+# ─── Supabase (auth-only) ────────────────────────────────────────────────────
+supabase_url              = "https://ryscycgvpvlblmagmqqe.supabase.co"
+supabase_jwks_url         = "https://ryscycgvpvlblmagmqqe.supabase.co/auth/v1/.well-known/jwks.json"
+supabase_jwt_secret       = "CHANGE_ME"  # From Supabase Dashboard → Settings → API
+supabase_service_role_key = "CHANGE_ME"  # From Supabase Dashboard → Settings → API
+
+# ─── Cashfree Payment Gateway ────────────────────────────────────────────────
+# Get production keys from: merchant.cashfree.com → Developers → API Keys
+cashfree_app_id    = "CHANGE_ME"
+cashfree_secret_key = "CHANGE_ME"
+cashfree_env       = "PRODUCTION"
+
+# ─── Zoom Per-Coach OAuth (General App) ──────────────────────────────────────
+# Create at marketplace.zoom.us → Develop → Build App → General App
+# After terraform apply, update this URI in the Zoom app settings too.
+zoom_oauth_client_id     = "CHANGE_ME"
+zoom_oauth_client_secret = "CHANGE_ME"
+zoom_oauth_redirect_uri  = "https://CHANGE_ME_API_URL/api/zoom/callback"
+
+# ─── Zoom Meeting SDK ────────────────────────────────────────────────────────
+# Create at marketplace.zoom.us → Develop → Build App → Meeting SDK
+zoom_sdk_key    = "CHANGE_ME"
+zoom_sdk_secret = "CHANGE_ME"
+
+# ─── Zoom Legacy S2S (optional fallback) ─────────────────────────────────────
+# Leave as empty strings if all coaches will use per-coach OAuth.
+zoom_account_id    = ""
+zoom_client_id     = ""
+zoom_client_secret = ""
+
+# ─── App Runner Sizing ───────────────────────────────────────────────────────
+api_cpu    = "0.5"   # vCPU: 0.25 | 0.5 | 1 | 2 | 4
+api_memory = "1024"  # MB:   512 | 1024 | 2048 | ...
+
+# ─── SES Email (optional — leave email_domain empty to skip) ─────────────────
+email_domain       = ""  # e.g. vitale.app
+email_from_address = ""  # e.g. noreply@vitale.app

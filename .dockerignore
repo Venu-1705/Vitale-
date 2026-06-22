@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Node modules (Docker builder installs its own)
+**/node_modules
+
+# Environment files (never bake credentials into the image)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Expo / React Native build artifacts
+artifacts/mobile/.expo
+artifacts/mobile/android
+artifacts/mobile/ios
+
+# Coach platform build output (built by Amplify separately)
+artifacts/coach-platform/dist
+
+# Terraform state (never needed in Docker)
+infra/
+
+# Misc
+**/.DS_Store
+**/dist
+!artifacts/api-server/dist

@@ -1,0 +1,46 @@
+# =============================================================================
+# Vitalé — host crontab: pg_cron replacement for vanilla PostgreSQL 18.
+# Mirrors the 15 schedules from lib/db/migrations/post/0116_pg_cron_jobs.sql.
+# All times are UTC (CRON_TZ below) — identical to the original pg_cron setup.
+# IST conversions: midnight IST = 18:30 UTC.
+#
+# INSTALL (Linux / cronie / Vixie cron):
+#   1) Make the runner executable:   chmod +x /opt/vitale/lib/db/cron/run-job.sh
+#   2) Put DATABASE_URL + the absolute repo path into this file's env lines below
+#      (or source them from a protected env file — never commit real secrets).
+#   3) Install for the service user:  crontab -u vitale /opt/vitale/lib/db/cron/vitale.crontab
+#   4) Verify:                         crontab -u vitale -l
+#
+# macOS (launchd) note: macOS cron is deprecated. For a dev box, either run this
+# crontab via `crontab vitale.crontab`, or create one launchd .plist per job with
+# <StartCalendarInterval>. The runner script (run-job.sh) is identical either way.
+#
+# Observability: each line appends stdout/stderr to a per-job log AND the
+# procedure writes public.job_runs; alerting reads job_runs (status='error').
+# =============================================================================
+
+CRON_TZ=UTC
+SHELL=/bin/bash
+# Absolute path to the runner (edit to match the deploy location):
+VITALE_RUN=/opt/vitale/lib/db/cron/run-job.sh
+# DATABASE_URL must be exported to cron's environment. Prefer an env file:
+#   BASH_ENV=/etc/vitale/db.env   (a file that `export DATABASE_URL=...`)
+BASH_ENV=/etc/vitale/db.env
+VITALE_LOG=/var/log/vitale
+
+# ---- m   h  dom mon dow   command --------------------------------------------
+0    18  *   *   *     "$VITALE_RUN" job_partition_provision           >> "$VITALE_LOG/partition_provision.log" 2>&1
+30   18  1   *   *     "$VITALE_RUN" job_partition_retention           >> "$VITALE_LOG/partition_retention.log" 2>&1
+*/15 *   *   *   *     "$VITALE_RUN" job_grant_reaper                  >> "$VITALE_LOG/grant_reaper.log" 2>&1
+0    19  *   *   *     "$VITALE_RUN" job_metrics_rollup                >> "$VITALE_LOG/metrics_rollup.log" 2>&1
+30   18  *   *   *     "$VITALE_RUN" job_streak_rollover               >> "$VITALE_LOG/streak_rollover.log" 2>&1
+*/10 *   *   *   *     "$VITALE_RUN" job_admin_access_sla              >> "$VITALE_LOG/admin_access_sla.log" 2>&1
+0    20  *   *   *     "$VITALE_RUN" job_audit_chain_verify            >> "$VITALE_LOG/audit_chain_verify.log" 2>&1
+0    21  *   *   *     "$VITALE_RUN" job_consent_expiry_scan           >> "$VITALE_LOG/consent_expiry_scan.log" 2>&1
+0    20  *   *   *     "$VITALE_RUN" job_invoice_issue                 >> "$VITALE_LOG/invoice_issue.log" 2>&1
+0    22  *   *   *     "$VITALE_RUN" job_payout_reconcile              >> "$VITALE_LOG/payout_reconcile.log" 2>&1
+*/5  *   *   *   *     "$VITALE_RUN" job_webhook_retry_sweep           >> "$VITALE_LOG/webhook_retry_sweep.log" 2>&1
+*    *   *   *   *     "$VITALE_RUN" job_notification_dispatch_enqueue >> "$VITALE_LOG/notification_dispatch_enqueue.log" 2>&1
+15   18  *   *   0     "$VITALE_RUN" job_notification_cleanup          >> "$VITALE_LOG/notification_cleanup.log" 2>&1
+45   18  *   *   *     "$VITALE_RUN" job_asset_retention_sweep         >> "$VITALE_LOG/asset_retention_sweep.log" 2>&1
+0    7   *   *   *     "$VITALE_RUN" job_subscription_dunning          >> "$VITALE_LOG/subscription_dunning.log" 2>&1
