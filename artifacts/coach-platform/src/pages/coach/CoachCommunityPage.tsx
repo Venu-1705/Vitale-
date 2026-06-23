@@ -12,7 +12,7 @@ import {
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
 import {
-  useCommunityPosts, useCreatePost, useUpdatePost, useLikePost,
+  useInfiniteCommunityPosts, useCreatePost, useUpdatePost, useLikePost,
   usePostComments, useCreateComment, usePostFlags, useTriageFlag,
   type CommunityPost, type PostType, type PostStatus,
 } from '@/lib/community';
@@ -103,7 +103,8 @@ function PostCard({ post }: { post: CommunityPost }) {
  */
 export default function CoachCommunityPage() {
   const organizationId = useAuthStore((s) => s.user?.organizationId);
-  const posts = useCommunityPosts(organizationId ? { organizationId } : {});
+  const posts = useInfiniteCommunityPosts(organizationId ? { organizationId } : {});
+  const allPosts = posts.data?.pages.flatMap((pg) => pg.posts) ?? [];
   const createPost = useCreatePost();
   const [composer, setComposer] = useState('');
   const [postType, setPostType] = useState<PostType>('text');
@@ -156,9 +157,21 @@ export default function CoachCommunityPage() {
             <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /> Loading feed…</div>
           ) : posts.isError ? (
             <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground"><AlertCircle className="w-6 h-6 text-destructive" /> Couldn't load the feed.<Button variant="outline" size="sm" onClick={() => posts.refetch()}>Retry</Button></div>
-          ) : (posts.data ?? []).length === 0 ? (
+          ) : allPosts.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground"><MessageSquare className="w-8 h-8 opacity-40" /> No posts yet.</div>
-          ) : posts.data!.map((p) => <PostCard key={p.id} post={p} />)}
+          ) : (
+            <>
+              {allPosts.map((p) => <PostCard key={p.id} post={p} />)}
+              {posts.hasNextPage && (
+                <div className="flex justify-center pt-2">
+                  <Button variant="outline" size="sm" onClick={() => posts.fetchNextPage()} disabled={posts.isFetchingNextPage}>
+                    {posts.isFetchingNextPage && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Load more
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="moderation">

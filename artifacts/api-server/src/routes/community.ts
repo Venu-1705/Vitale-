@@ -153,7 +153,26 @@ const UpdatePostBody = z.object({
 const FeedQuery = z.object({
   organizationId: z.string().uuid().optional(),
   status: z.enum(POST_STATUS).optional(), // default: active-only feed
+  // Opt-in keyset pagination. Without `limit` the feed returns the full set
+  // (preserves existing behavior, incl. the mobile client).
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  cursor: z.string().optional(),
 });
+
+// Opaque keyset cursor over the feed's (is_pinned, created_at, id) sort key.
+type FeedCursor = { p: boolean; c: string; i: string };
+function encodeCursor(c: FeedCursor): string {
+  return Buffer.from(JSON.stringify(c), "utf8").toString("base64url");
+}
+function decodeCursor(raw: string): FeedCursor {
+  try {
+    const v = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as FeedCursor;
+    if (typeof v.p === "boolean" && typeof v.c === "string" && typeof v.i === "string") return v;
+  } catch {
+    /* fall through to the 400 below */
+  }
+  throw new ApiError(400, "invalid_cursor", "Malformed pagination cursor.");
+}
 
 // POST /community-posts — author publishes. WITH CHECK pins author=auth.uid() AND
 // can_view_org_community(org). like_count/comment_count default 0 (trigger-owned thereafter).
@@ -187,7 +206,19 @@ router.get(
     if (query.organizationId) {
       conds.push(eq(communityPosts.organizationId, query.organizationId));
     }
-    const rows = await db
+
+    const { limit } = query;
+    // Pagination is opt-in: only a `limit` engages keyset paging + nextCursor.
+    if (limit !== undefined && query.cursor) {
+      const cur = decodeCursor(query.cursor);
+      // Row-value comparison over the exact (all-DESC) sort key returns the rows
+      // that fall strictly after the cursor — no offset scan, stable under inserts.
+      conds.push(
+        sql`(${communityPosts.isPinned}, ${communityPosts.createdAt}, ${communityPosts.id}) < (${cur.p}::boolean, ${cur.c}::timestamptz, ${cur.i}::uuid)`,
+      );
+    }
+
+    const base = db
       .select({
         ...getTableColumns(communityPosts),
         // Per-row "did the caller like this?" — correlated EXISTS against post_likes for
@@ -200,8 +231,28 @@ router.get(
       })
       .from(communityPosts)
       .where(and(...conds))
-      .orderBy(desc(communityPosts.isPinned), desc(communityPosts.createdAt));
-    return { count: rows.length, posts: rows };
+      // id is a stable, time-ordered (UUIDv7) tiebreaker — required for correct keyset paging.
+      .orderBy(
+        desc(communityPosts.isPinned),
+        desc(communityPosts.createdAt),
+        desc(communityPosts.id),
+      );
+
+    if (limit === undefined) {
+      const rows = await base;
+      return { count: rows.length, posts: rows };
+    }
+
+    // Fetch one extra row to detect whether a further page exists.
+    const fetched = await base.limit(limit + 1);
+    const hasMore = fetched.length > limit;
+    const posts = hasMore ? fetched.slice(0, limit) : fetched;
+    const last = posts[posts.length - 1];
+    const nextCursor =
+      hasMore && last
+        ? encodeCursor({ p: last.isPinned, c: last.createdAt.toISOString(), i: last.id })
+        : null;
+    return { count: posts.length, posts, nextCursor };
   }),
 );
 

@@ -14,6 +14,7 @@
 import {
   useMutation,
   useQuery,
+  useInfiniteQuery,
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
@@ -113,6 +114,32 @@ export function useCommunityPosts(params: FeedParams = {}, options?: Partial<Use
     queryFn: async () => (await apiGet<PostsEnvelope>(`/community-posts${key}`)).posts,
     staleTime: 20_000,
     ...options,
+  });
+}
+
+/** One page of the paginated feed (server adds nextCursor when more remain). */
+interface PostsPage { count: number; posts: CommunityPost[]; nextCursor: string | null }
+
+const FEED_PAGE_SIZE = 20;
+
+/**
+ * Cursor-paginated feed for infinite scroll. Opts into the API's keyset
+ * pagination (?limit/&cursor); flatten `data.pages` for rendering.
+ */
+export function useInfiniteCommunityPosts(params: FeedParams = {}) {
+  return useInfiniteQuery({
+    queryKey: [...communityKeys.posts(feedQuery(params)), "infinite"],
+    queryFn: async ({ pageParam }) => {
+      const q = new URLSearchParams();
+      if (params.organizationId) q.set("organizationId", params.organizationId);
+      if (params.status) q.set("status", params.status);
+      q.set("limit", String(FEED_PAGE_SIZE));
+      if (pageParam) q.set("cursor", pageParam);
+      return apiGet<PostsPage>(`/community-posts?${q.toString()}`);
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    staleTime: 20_000,
   });
 }
 
