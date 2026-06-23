@@ -1,15 +1,26 @@
 import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { configureApi } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 
 import { useAuthStore } from "./stores/auth-store";
 import ProtectedLayout from "./components/layout/ProtectedLayout";
+
+/** Centered full-screen spinner — shown while the persisted session restores. */
+function FullScreenSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 // Auth
 import Login from "./pages/auth/login";
@@ -84,7 +95,7 @@ function ProtectedRoute({ path, component: Component }: { path: string; componen
       {() => {
         // Wait for the persisted Supabase session to restore before deciding —
         // otherwise a page refresh bounces an authenticated user to /login.
-        if (!hydrated) return null;
+        if (!hydrated) return <FullScreenSpinner />;
         if (!isAuthenticated) return <Redirect to="/login" />;
         return (
           <ProtectedLayout>
@@ -96,12 +107,18 @@ function ProtectedRoute({ path, component: Component }: { path: string; componen
   );
 }
 
+/** Root path: send authenticated users straight to the dashboard, others to login. */
+function RootRedirect() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hydrated = useAuthStore((state) => state.hydrated);
+  if (!hydrated) return <FullScreenSpinner />;
+  return <Redirect to={isAuthenticated ? "/admin/dashboard" : "/login"} />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/">
-        {() => <Redirect to="/login" />}
-      </Route>
+      <Route path="/" component={RootRedirect} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/forgot-password" component={ForgotPassword} />
@@ -183,9 +200,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <ErrorBoundary>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+        </ErrorBoundary>
         <Toaster position="bottom-right" richColors />
       </TooltipProvider>
     </QueryClientProvider>

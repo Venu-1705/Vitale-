@@ -10,6 +10,7 @@ import DietActivityTab from './DietActivityTab';
 import WeeklyReportsTab from './WeeklyReportsTab';
 import { useCarePlans, type CarePlanStatus } from '@/lib/collaboration';
 import { useDietChartAssignments, type AssignmentStatus } from '@/lib/nutrition';
+import { QueryError } from '@/components/QueryError';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const short = (id: string) => id.slice(0, 8);
@@ -75,6 +76,8 @@ export default function ClientDetail() {
             <CardContent className="space-y-2">
               {carePlansQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</p>
+              ) : carePlansQuery.isError ? (
+                <QueryError compact message="Couldn't load care plans." onRetry={() => carePlansQuery.refetch()} retrying={carePlansQuery.isRefetching} />
               ) : carePlans.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No care plans for this client.</p>
               ) : carePlans.map((p) => (
@@ -107,6 +110,8 @@ export default function ClientDetail() {
             <CardContent className="space-y-2">
               {assignmentsQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</p>
+              ) : assignmentsQuery.isError ? (
+                <QueryError compact message="Couldn't load assigned diet charts." onRetry={() => assignmentsQuery.refetch()} retrying={assignmentsQuery.isRefetching} />
               ) : assignments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No diet charts assigned to this client.</p>
               ) : assignments.map((a) => (
