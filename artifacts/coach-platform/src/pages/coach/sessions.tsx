@@ -74,7 +74,9 @@ function ZoomMeetingEmbed({ session, onClose }: EmbedProps) {
         },
       });
 
-      const coachName = "Coach"; // DPDP: no PII; Zoom shows this as display name in the meeting
+      // Display name shown to the client in the meeting — the coach's own name,
+      // read imperatively at join time (falls back to a neutral label).
+      const coachName = useAuthStore.getState().user?.name?.trim() || "Coach";
       client
         .join({
           sdkKey,
