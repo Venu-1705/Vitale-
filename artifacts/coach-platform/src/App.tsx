@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, type ComponentType } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -91,7 +91,7 @@ const SharedPrograms = lazy(() => import("./pages/collab/shared-programs"));
 // Point the shared transport at the API base once, at module load.
 configureApi();
 
-function ProtectedRoute({ path, component: Component }: { path: string; component: any }) {
+function ProtectedRoute({ path, component: Component }: { path: string; component: ComponentType }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hydrated = useAuthStore((state) => state.hydrated);
 
