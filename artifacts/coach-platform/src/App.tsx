@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -22,66 +22,71 @@ function FullScreenSpinner() {
   );
 }
 
-// Auth
+// Auth pages stay eager — they're the unauthenticated entry point, so a fast
+// first paint matters and they carry little weight.
 import Login from "./pages/auth/login";
 import Signup from "./pages/auth/signup";
 import ForgotPassword from "./pages/auth/forgot-password";
 
+// Every authenticated page is lazy-loaded: each route ships as its own chunk,
+// fetched on first navigation (Suspense renders a spinner meanwhile). This keeps
+// the initial bundle small instead of bundling all ~60 pages up front.
+
 // Shared
-import Dashboard from "./pages/dashboard";
-import Settings from "./pages/settings";
-import Messages from "./pages/messages";
+const Dashboard = lazy(() => import("./pages/dashboard"));
+const Settings = lazy(() => import("./pages/settings"));
+const Messages = lazy(() => import("./pages/messages"));
 
 // Admin
-import Coaches from "./pages/admin/coaches";
-import Programs from "./pages/admin/programs";
-import ProgramCreate from "./pages/admin/program-create";
-import ProgramDetail from "./pages/admin/program-detail";
-import Users from "./pages/admin/users";
-import Services from "./pages/admin/services";
-import ServiceCreate from "./pages/admin/service-create";
-import ServiceDetail from "./pages/admin/service-detail";
-import Workshops from "./pages/admin/workshops";
-import Events from "./pages/admin/events";
-import EventCreate from "./pages/coach/event-create";
-import EventDetail from "./pages/coach/event-detail";
-import Community from "./pages/admin/community";
-import CommunityChannel from "./pages/admin/community-channel";
-import Analytics from "./pages/admin/analytics";
-import AuditLogs from "./pages/admin/audit-logs";
+const Coaches = lazy(() => import("./pages/admin/coaches"));
+const Programs = lazy(() => import("./pages/admin/programs"));
+const ProgramCreate = lazy(() => import("./pages/admin/program-create"));
+const ProgramDetail = lazy(() => import("./pages/admin/program-detail"));
+const Users = lazy(() => import("./pages/admin/users"));
+const Services = lazy(() => import("./pages/admin/services"));
+const ServiceCreate = lazy(() => import("./pages/admin/service-create"));
+const ServiceDetail = lazy(() => import("./pages/admin/service-detail"));
+const Workshops = lazy(() => import("./pages/admin/workshops"));
+const Events = lazy(() => import("./pages/admin/events"));
+const EventCreate = lazy(() => import("./pages/coach/event-create"));
+const EventDetail = lazy(() => import("./pages/coach/event-detail"));
+const Community = lazy(() => import("./pages/admin/community"));
+const CommunityChannel = lazy(() => import("./pages/admin/community-channel"));
+const Analytics = lazy(() => import("./pages/admin/analytics"));
+const AuditLogs = lazy(() => import("./pages/admin/audit-logs"));
 
 // Coach
-import MyPrograms from "./pages/coach/my-programs";
-import DietCharts from "./pages/coach/diet-charts";
-import DietChartBuilder from "./pages/coach/diet-chart-builder";
-import DietChartView from "./pages/coach/diet-chart-view";
-import DietChartTemplates from "./pages/coach/diet-chart-templates";
-import Recipes from "./pages/coach/recipes";
-import RecipeCreate from "./pages/coach/recipe-create";
-import RecipeDetail from "./pages/coach/recipe-detail";
-import RecipeCollections from "./pages/coach/recipe-collections";
-import ZoomIntegration from "./pages/coach/zoom-integration";
-import Resources from "./pages/coach/resources";
-import MyTeam from "./pages/coach/my-team";
-import Collaborations from "./pages/coach/collaborations";
-import CollaborationDetail from "./pages/coach/collaboration-detail";
-import Clients from "./pages/coach/clients";
-import ClientDetail from "./pages/coach/client-detail";
-import Storefront from "./pages/coach/storefront";
-import Leaderboard from "./pages/coach/leaderboard";
-import HabitsPage from "./pages/coach/HabitsPage";
-import BookingsPage from "./pages/coach/BookingsPage";
-import Sessions from "./pages/coach/sessions";
-import CoachCommunityPage from "./pages/coach/CoachCommunityPage";
-import GamificationPage from "./pages/admin/GamificationPage";
-import NotificationsPage from "./pages/admin/NotificationsPage";
-import MessagesBroadcast from "./pages/messages-broadcast";
+const MyPrograms = lazy(() => import("./pages/coach/my-programs"));
+const DietCharts = lazy(() => import("./pages/coach/diet-charts"));
+const DietChartBuilder = lazy(() => import("./pages/coach/diet-chart-builder"));
+const DietChartView = lazy(() => import("./pages/coach/diet-chart-view"));
+const DietChartTemplates = lazy(() => import("./pages/coach/diet-chart-templates"));
+const Recipes = lazy(() => import("./pages/coach/recipes"));
+const RecipeCreate = lazy(() => import("./pages/coach/recipe-create"));
+const RecipeDetail = lazy(() => import("./pages/coach/recipe-detail"));
+const RecipeCollections = lazy(() => import("./pages/coach/recipe-collections"));
+const ZoomIntegration = lazy(() => import("./pages/coach/zoom-integration"));
+const Resources = lazy(() => import("./pages/coach/resources"));
+const MyTeam = lazy(() => import("./pages/coach/my-team"));
+const Collaborations = lazy(() => import("./pages/coach/collaborations"));
+const CollaborationDetail = lazy(() => import("./pages/coach/collaboration-detail"));
+const Clients = lazy(() => import("./pages/coach/clients"));
+const ClientDetail = lazy(() => import("./pages/coach/client-detail"));
+const Storefront = lazy(() => import("./pages/coach/storefront"));
+const Leaderboard = lazy(() => import("./pages/coach/leaderboard"));
+const HabitsPage = lazy(() => import("./pages/coach/HabitsPage"));
+const BookingsPage = lazy(() => import("./pages/coach/BookingsPage"));
+const Sessions = lazy(() => import("./pages/coach/sessions"));
+const CoachCommunityPage = lazy(() => import("./pages/coach/CoachCommunityPage"));
+const GamificationPage = lazy(() => import("./pages/admin/GamificationPage"));
+const NotificationsPage = lazy(() => import("./pages/admin/NotificationsPage"));
+const MessagesBroadcast = lazy(() => import("./pages/messages-broadcast"));
 
 // Team
-import AssignedPrograms from "./pages/team/assigned-programs";
+const AssignedPrograms = lazy(() => import("./pages/team/assigned-programs"));
 
 // Collab
-import SharedPrograms from "./pages/collab/shared-programs";
+const SharedPrograms = lazy(() => import("./pages/collab/shared-programs"));
 
 // Point the shared transport at the API base once, at module load.
 configureApi();
@@ -202,7 +207,9 @@ function App() {
       <TooltipProvider>
         <ErrorBoundary>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <Suspense fallback={<FullScreenSpinner />}>
+              <Router />
+            </Suspense>
           </WouterRouter>
         </ErrorBoundary>
         <Toaster position="bottom-right" richColors />
